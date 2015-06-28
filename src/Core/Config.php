@@ -15,11 +15,20 @@ class Config implements \ArrayAccess {
 	 * @var array
 	 */
 	private $config = [
+		'project_root' => '/home/garun/test/',
+
 		// DB config
 		'server_name' => 'localhost',
 		'db_user' => 'test',
 		'db_pass' => 'test',
 		'db_name' => 'test',
+
+		// Stream settings
+		'stream_url' => 'rtmp://edge3.live.irib.ir/etv/irinn-3',
+		'video_length' => '10', // Длительность видео-файлов в секундах
+		'video_intersection_length' => '3', // Длительность видео-файлов в секундах
+		'video_dir' => 'storage/video/',
+		'video_format' => 'mp4'
 	];
 
 	/**
