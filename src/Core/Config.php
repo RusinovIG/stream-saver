@@ -16,6 +16,7 @@ class Config implements \ArrayAccess {
 	 */
 	private $config = [
 		'project_root' => '/home/garun/test/',
+		'tmp_dir' => 'tmp/',
 
 		// DB config
 		'server_name' => 'localhost',
