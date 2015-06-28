@@ -21,10 +21,13 @@ class SingletonCommand extends Command {
 	 */
 	protected $lockFilePath;
 	/**
-	 *
 	 * @var resource
 	 */
 	private $lock;
+	/**
+	 * @var
+	 */
+	private $initialPid;
 
 	/**
 	 * @param null|string $lockFilePath
@@ -35,6 +38,7 @@ class SingletonCommand extends Command {
 		$name = null
 	) {
 		$this->lockFilePath = $lockFilePath;
+		$this->initialPid = getmypid();
 		$this->lock();
 		parent::__construct($name);
 	}
@@ -46,7 +50,7 @@ class SingletonCommand extends Command {
 		$this->unlock();
 	}
 
-	protected function lock() {
+	public function lock() {
 		$path = $this->getLockFilePath();
 		if (!$this->lock = fopen($path, "w")) {
 			throw new \RuntimeException('Can\t create lock for command: ' . $this->getName());
@@ -62,13 +66,20 @@ class SingletonCommand extends Command {
 	 * Разблокируем lock-файл при завершении команды
 	 * @return void
 	 */
-	protected function unlock() {
+	public function unlock() {
 		if (!$this->lock) {
+			return;
+		}
+		// Если завершается неосновной поток, разблокировать lock-файл рано
+		if ($this->initialPid != getmypid()) {
 			return;
 		}
 		flock($this->lock, LOCK_UN);
 		fclose($this->lock);
-		unlink($this->getLockFilePath());
+		$lockFile = $this->getLockFilePath();
+		if (file_exists($lockFile)) {
+			unlink($lockFile);
+		}
 	}
 
 	/**

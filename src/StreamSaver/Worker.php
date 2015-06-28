@@ -14,6 +14,14 @@ namespace StreamSaver;
 class Worker {
 
 	/**
+	 * @var resource a shared memory segment identifier
+	 */
+	private static $sharedMemoryId;
+	/**
+	 * @var int
+	 */
+	private static $secondsSavedKey = 1234;
+	/**
 	 * @var string
 	 */
 	private $streamUrl;
@@ -46,9 +54,32 @@ class Worker {
 		$this->videoLength = $videoLength;
 		$this->videoFormat = $videoFormat;
 		$this->storagePath = $storagePath;
+
+		self::$sharedMemoryId = shm_attach(ftok(__FILE__, 'A'));
+		shm_put_var(self::$sharedMemoryId, $this->getHashKey('pid'), getmypid());
+	}
+
+	/**
+	 * @return void
+	 * @access public
+	 * @final
+	 */
+	final public function __destruct() {
+		if (
+			@shm_has_var(self::$sharedMemoryId, $this->getHashKey('pid')) &&
+			shm_get_var(self::$sharedMemoryId, $this->getHashKey('pid')) == getmypid()
+		) {
+			shm_remove(self::$sharedMemoryId);
+		}
 	}
 
 	public function run() {
+		$pid = pcntl_fork();
+		if ($pid == -1) {
+			throw new \RuntimeException('Could not fork');
+		} else if ($pid) {
+			return;
+		}
 		$filePath = $this->getFilePath();
 		$cmd = 'ffmpeg -i ' . $this->streamUrl . ' -strict -2 -t ' . $this->videoLength . ' ' . $filePath . ' 2>&1';
 		$descriptors = array(
@@ -72,12 +103,33 @@ class Worker {
 			$line .= $char;
 			if (in_array($char, ["\n", "\r"])) {
 				if (preg_match('/(?<=time=)\d*\.\d+/', $line, $matches)) {
-					$secondsSaved = $matches[0];
+					$this->setSecondsSaved($matches[0]);
 				}
 				$line = '';
 			}
 		}
+		$this->setSecondsSaved($this->videoLength);
 		proc_close($process);
+		exit;
+	}
+
+	/**
+	 * @param int $value
+	 */
+	public function setSecondsSaved($value) {
+		shm_put_var(self::$sharedMemoryId, self::$secondsSavedKey, $value);
+	}
+
+	/**
+	 * Возвращает количество секунд видео, записанных текущим воркером
+	 * @return int
+	 */
+	public function getSecondsSaved() {
+		if (@shm_has_var(self::$sharedMemoryId, self::$secondsSavedKey)) {
+			return shm_get_var(self::$sharedMemoryId, self::$secondsSavedKey);
+		} else {
+			return null;
+		}
 	}
 
 	/**
@@ -93,5 +145,13 @@ class Worker {
 		}
 		$filePath = $fileDir . 'video_' . date('H:i:s') . '.' . $this->videoFormat;
 		return $filePath;
+	}
+
+	/**
+	 * @param string $input
+	 * @return int
+	 */
+	private function getHashKey($input) {
+		return crc32($input);
 	}
 }
