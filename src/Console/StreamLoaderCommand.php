@@ -60,7 +60,7 @@ class StreamLoaderCommand extends SingletonCommand {
 	 */
 	protected function execute(InputInterface $input, OutputInterface $output) {
 		$i = 0;
-		while (($i++) < 5) {
+		while (($i++) < 10) {
 			/** @var Worker $worker */
 			$worker = $this->container['StreamSaverWorker'];
 
