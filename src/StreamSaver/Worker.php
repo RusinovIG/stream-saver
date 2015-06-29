@@ -14,10 +14,6 @@ namespace StreamSaver;
 class Worker {
 
 	/**
-	 * @var resource a shared memory segment identifier
-	 */
-	private static $sharedMemoryId;
-	/**
 	 * @var int
 	 */
 	private static $secondsSavedKey = 1234;
@@ -37,6 +33,10 @@ class Worker {
 	 * @var string
 	 */
 	private $storagePath;
+	/**
+	 * @var resource a shared memory segment identifier
+	 */
+	private $sharedMemoryId;
 
 	/**
 	 * @param $streamUrl
@@ -55,8 +55,9 @@ class Worker {
 		$this->videoFormat = $videoFormat;
 		$this->storagePath = $storagePath;
 
-		self::$sharedMemoryId = shm_attach(ftok(__FILE__, 'A'));
-		shm_put_var(self::$sharedMemoryId, $this->getHashKey('pid'), getmypid());
+		$this->sharedMemoryId = shm_attach(ftok(__FILE__, 'A') . time()%1000);
+		shm_put_var($this->sharedMemoryId, $this->getHashKey('pid'), getmypid());
+		var_dump($this->sharedMemoryId);
 	}
 
 	/**
@@ -66,10 +67,12 @@ class Worker {
 	 */
 	final public function __destruct() {
 		if (
-			@shm_has_var(self::$sharedMemoryId, $this->getHashKey('pid')) &&
-			shm_get_var(self::$sharedMemoryId, $this->getHashKey('pid')) == getmypid()
+			@shm_has_var($this->sharedMemoryId, $this->getHashKey('pid')) &&
+			shm_get_var($this->sharedMemoryId, $this->getHashKey('pid')) == getmypid()
 		) {
-			shm_remove(self::$sharedMemoryId);
+			echo 'Remove worker' . $this->sharedMemoryId . PHP_EOL;
+			shm_remove($this->sharedMemoryId);
+
 		}
 	}
 
@@ -117,7 +120,7 @@ class Worker {
 	 * @param int $value
 	 */
 	public function setSecondsSaved($value) {
-		shm_put_var(self::$sharedMemoryId, self::$secondsSavedKey, $value);
+		shm_put_var($this->sharedMemoryId, self::$secondsSavedKey, $value);
 	}
 
 	/**
@@ -125,8 +128,8 @@ class Worker {
 	 * @return int
 	 */
 	public function getSecondsSaved() {
-		if (@shm_has_var(self::$sharedMemoryId, self::$secondsSavedKey)) {
-			return shm_get_var(self::$sharedMemoryId, self::$secondsSavedKey);
+		if (@shm_has_var($this->sharedMemoryId, self::$secondsSavedKey)) {
+			return shm_get_var($this->sharedMemoryId, self::$secondsSavedKey);
 		} else {
 			return null;
 		}
