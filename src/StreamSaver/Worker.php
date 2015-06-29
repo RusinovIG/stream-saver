@@ -57,7 +57,6 @@ class Worker {
 
 		$this->sharedMemoryId = shm_attach(ftok(__FILE__, 'A') . time()%1000);
 		shm_put_var($this->sharedMemoryId, $this->getHashKey('pid'), getmypid());
-		var_dump($this->sharedMemoryId);
 	}
 
 	/**
@@ -70,7 +69,6 @@ class Worker {
 			@shm_has_var($this->sharedMemoryId, $this->getHashKey('pid')) &&
 			shm_get_var($this->sharedMemoryId, $this->getHashKey('pid')) == getmypid()
 		) {
-			echo 'Remove worker' . $this->sharedMemoryId . PHP_EOL;
 			shm_remove($this->sharedMemoryId);
 
 		}

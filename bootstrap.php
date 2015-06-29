@@ -23,3 +23,20 @@ $container['StreamSaverWorker'] = $container->factory(function ($c) {
 		$c['config']['project_root'] . $c['config']['video_dir']
 	);
 });
+
+//$container['ScheduleSoapClient'] = function ($c) {
+//	return new SoapClient(
+//		$c['config']['schedule_wsdl_url']
+//	);
+//};
+$container['ScheduleSoapClient'] = function ($c) {
+	return new \Schedule\MySoapClient(
+		$c['config']['schedule_wsdl_url']
+	);
+};
+
+$container['SoapScheduleProvider'] = function ($c) {
+	return new \Schedule\SoapScheduleProvider(
+		$c['ScheduleSoapClient']
+	);
+};

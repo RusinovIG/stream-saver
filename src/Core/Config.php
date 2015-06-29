@@ -27,9 +27,12 @@ class Config implements \ArrayAccess {
 		'db_pass' => 'test',
 		'db_name' => 'test',
 
+		// Wsdl config
+		'schedule_wsdl_url' => 'https://localhost/WebServices/Schedule.asmx?WSDL',
+
 		// Stream settings
 		'stream_url' => 'rtmp://edge3.live.irib.ir/etv/irinn-3',
-		'video_length' => '30', // Длительность видео-файлов в секундах
+		'video_length' => '20', // Длительность видео-файлов в секундах
 		'video_intersection_length' => '10', // Количество секунд до конца видео,
 											// за которое нужно начать писать следующий файл
 		'video_dir' => 'storage/video/',
