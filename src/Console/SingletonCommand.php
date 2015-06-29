@@ -60,6 +60,19 @@ class SingletonCommand extends Command {
 			fclose($this->lock);
 			throw new \RuntimeException('Command ' . $this->getName() . ' already running');
 		}
+		/**
+		 * При остановке программы извне нужно разблокировать текущий lock-файл
+		 */
+		pcntl_signal(
+			SIGTERM,
+			function ($signo) {
+				switch ($signo) {
+					case SIGTERM:
+						$this->unlock();
+						break;
+				}
+			}
+		);
 	}
 
 	/**
