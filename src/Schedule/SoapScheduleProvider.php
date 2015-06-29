@@ -8,6 +8,8 @@
 
 namespace Schedule;
 
+use Core\DB;
+
 /**
  * Класс для получения и сохранения расписаний в заданном интервале времени через soap сервис
  */
@@ -17,12 +19,21 @@ class SoapScheduleProvider {
 	 * @var \SoapClient
 	 */
 	private $scheduleSoapClient;
+	/**
+	 * @var DB
+	 */
+	private $db;
 
 	/**
 	 * @param \SoapClient $scheduleSoapClient
+	 * @param DB $db
 	 */
-	public function __construct(\SoapClient $scheduleSoapClient) {
+	public function __construct(
+		\SoapClient $scheduleSoapClient,
+		DB $db
+	) {
 		$this->scheduleSoapClient = $scheduleSoapClient;
+		$this->db = $db;
 	}
 
 	/**
@@ -33,14 +44,22 @@ class SoapScheduleProvider {
 	public function saveSchedules(\DateTime $fromTime, \DateTime $toTime) {
 		try {
 			$programs = $this->scheduleSoapClient->getInfoByTime(
-				$fromTime->format('Y-m-d H:i'),
-				$toTime->format('Y-m-d H:i')
+				$fromTime->format('Y-m-d H:i:s'),
+				$toTime->format('Y-m-d H:i:s')
 			);
 			$programsArray = json_decode($programs, true);
 		} catch (\Exception $e) {
 			// TODO: Залогировать ошибку
 			return;
 		}
-		// TODO: код сохранения расписания
+		foreach ($programsArray as $startTime => $program) {
+			$this->db->insertArray(
+				'programs',
+				[
+					'time' => $startTime,
+					'program' => $program
+				]
+			);
+		}
 	}
 }

@@ -8,6 +8,8 @@
 
 namespace StreamSaver;
 
+use Core\DB;
+
 /**
  * Класс для запуска скрипта записи видео потока в файл и контроля его выполнения
  */
@@ -37,23 +39,30 @@ class Worker {
 	 * @var resource a shared memory segment identifier
 	 */
 	private $sharedMemoryId;
+	/**
+	 * @var DB
+	 */
+	private $db;
 
 	/**
 	 * @param $streamUrl
 	 * @param $videoLength
 	 * @param $videoFormat
 	 * @param $storagePath
+	 * @param DB $db
 	 */
 	public function __construct(
 		$streamUrl,
 		$videoLength,
 		$videoFormat,
-		$storagePath
+		$storagePath,
+		DB $db
 	) {
 		$this->streamUrl = $streamUrl;
 		$this->videoLength = $videoLength;
 		$this->videoFormat = $videoFormat;
 		$this->storagePath = $storagePath;
+		$this->db = $db;
 
 		$this->sharedMemoryId = shm_attach(ftok(__FILE__, 'A') . time()%1000);
 		shm_put_var($this->sharedMemoryId, $this->getHashKey('pid'), getmypid());
@@ -75,13 +84,16 @@ class Worker {
 	}
 
 	public function run() {
+		$videoStartTime = new \DateTime();
+		$videoEndTime = new \DateTime('+' . $this->videoLength . ' seconds');
+		$filePath = $this->getFilePath($videoStartTime);
+		$this->saveVideoInfo($filePath, $videoStartTime, $videoEndTime);
 		$pid = pcntl_fork();
 		if ($pid == -1) {
 			throw new \RuntimeException('Could not fork');
 		} else if ($pid) {
 			return;
 		}
-		$filePath = $this->getFilePath();
 		$cmd = 'ffmpeg -i ' . $this->streamUrl . ' -strict -2 -t ' . $this->videoLength . ' ' . $filePath . ' 2>&1';
 		$descriptors = array(
 			0 => array('pipe', 'r'),
@@ -135,16 +147,17 @@ class Worker {
 
 	/**
 	 * Генерирует имя файла видео
+	 * @param \DateTime $videoStartTime
 	 * @return string
 	 */
-	private function getFilePath() {
+	private function getFilePath(\DateTime $videoStartTime) {
 		// Создаем путь вида 2015/06/28
-		$pathFromDate = date('Y/m/d/');
+		$pathFromDate = $videoStartTime->format('Y/m/d/');
 		$fileDir = $this->storagePath . $pathFromDate;
 		if (!is_dir($fileDir)) {
 			mkdir($fileDir, 0777, true);
 		}
-		$filePath = $fileDir . 'video_' . date('H:i:s') . '.' . $this->videoFormat;
+		$filePath = $fileDir . 'video_' . $videoStartTime->format('H:i:s') . '.' . $this->videoFormat;
 		return $filePath;
 	}
 
@@ -154,5 +167,21 @@ class Worker {
 	 */
 	private function getHashKey($input) {
 		return crc32($input);
+	}
+
+	/**
+	 * @param $filePath
+	 * @param \DateTime $videoStartTime
+	 * @param \DateTime $videoEndTime
+	 */
+	private function saveVideoInfo($filePath, \DateTime $videoStartTime, \DateTime $videoEndTime) {
+		$this->db->insertArray(
+			'video',
+			[
+				'start_time' => $videoStartTime->format('Y-m-d H:i:s'),
+				'end_time' => $videoEndTime->format('Y-m-d H:i:s'),
+				'url' => str_replace($this->storagePath, '', $filePath)
+			]
+		);
 	}
 }

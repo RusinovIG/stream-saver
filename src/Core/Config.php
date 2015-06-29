@@ -23,17 +23,17 @@ class Config implements \ArrayAccess {
 
 		// DB config
 		'server_name' => 'localhost',
-		'db_user' => 'test',
-		'db_pass' => 'test',
-		'db_name' => 'test',
+		'db_user' => 'video',
+		'db_pass' => 'video',
+		'db_name' => 'video',
 
 		// Wsdl config
 		'schedule_wsdl_url' => 'https://localhost/WebServices/Schedule.asmx?WSDL',
 
 		// Stream settings
 		'stream_url' => 'rtmp://edge3.live.irib.ir/etv/irinn-3',
-		'video_length' => '20', // Длительность видео-файлов в секундах
-		'video_intersection_length' => '10', // Количество секунд до конца видео,
+		'video_length' => '10', // Длительность видео-файлов в секундах
+		'video_intersection_length' => '5', // Количество секунд до конца видео,
 											// за которое нужно начать писать следующий файл
 		'video_dir' => 'storage/video/',
 		'video_format' => 'mp4'
